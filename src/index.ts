@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import connectDB from './config/database.js';
 import authRoutes from './routes/auth.routes.js';
 import playbookRoutes from './routes/playbook.routes.js';
+import coachRoutes from './routes/coach.routes.js';
+import adminRoutes from './routes/admin.routes.js';
 
 dotenv.config();
 
@@ -22,6 +24,8 @@ connectDB();
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/playbooks', playbookRoutes);
+app.use('/api/coach', coachRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Coaches Backend API' });

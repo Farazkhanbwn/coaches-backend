@@ -7,7 +7,8 @@ import {
   forgotPassword,
   resetPassword,
   verifyEmail,
-  resendVerification
+  resendVerification,
+  setupRepAccount
 } from '../controllers/auth.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 
@@ -21,5 +22,6 @@ router.post('/forgot-password', forgotPassword);
 router.post('/reset-password', resetPassword);
 router.post('/verify-email', verifyEmail);
 router.post('/resend-verification', resendVerification);
+router.post('/setup-rep', setupRepAccount);
 
 export default router;

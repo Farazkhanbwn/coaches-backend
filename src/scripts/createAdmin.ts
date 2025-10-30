@@ -16,7 +16,8 @@ const createAdmin = async () => {
       name: 'Admin User',
       email: 'admin@woodward.com',
       password: hashedPassword,
-      role: 'admin'
+      role: 'admin',
+      isEmailVerified: true
     });
 
     await admin.save();

@@ -10,7 +10,14 @@ export const signup = async (req: Request, res: Response) => {
   try {
     const { fullName, email, password, role, companyName, ownerName, ownerEmail } = req.body;
 
-    const existingUser = await User.findOne({ email: role === 'sales' ? email : ownerEmail });
+    // Map frontend roles to backend roles
+    const roleMapping: Record<string, string> = {
+      'individual': 'sales',
+      'company': 'coach'
+    };
+    const mappedRole = roleMapping[role] || role;
+
+    const existingUser = await User.findOne({ email: mappedRole === 'sales' ? email : ownerEmail });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -24,13 +31,13 @@ export const signup = async (req: Request, res: Response) => {
     const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
     const user = new User({
-      name: role === 'sales' ? fullName : ownerName,
-      email: role === 'sales' ? email : ownerEmail,
+      name: mappedRole === 'sales' ? fullName : ownerName,
+      email: mappedRole === 'sales' ? email : ownerEmail,
       password: hashedPassword,
-      role,
-      companyName: role === 'coach' ? companyName : undefined,
-      ownerName: role === 'coach' ? ownerName : undefined,
-      ownerEmail: role === 'coach' ? ownerEmail : undefined,
+      role: mappedRole,
+      companyName: mappedRole === 'coach' ? companyName : undefined,
+      ownerName: mappedRole === 'coach' ? ownerName : undefined,
+      ownerEmail: mappedRole === 'coach' ? ownerEmail : undefined,
       isEmailVerified: false,
       emailVerificationToken: hashedToken,
       emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
@@ -266,28 +273,66 @@ export const resendVerification = async (req: Request, res: Response) => {
       return res.json({ message: 'If an account exists with this email, a verification link will be sent.' });
     }
 
-    // If already verified, return success
     if (user.isEmailVerified) {
-      return res.json({ message: 'Email is already verified. You can log in now.' });
+      return res.json({ message: 'Email is already verified.' });
     }
 
     // Generate new verification token
     const verificationToken = crypto.randomBytes(32).toString('hex');
     const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
-    // Update user with new token
     user.emailVerificationToken = hashedToken;
-    user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    user.emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await user.save();
 
-    // Send verification email
     try {
       await sendEmailVerification(user.email, user.name, verificationToken);
     } catch (emailError) {
-      return res.status(500).json({ message: 'Failed to send verification email. Please try again.' });
+      return res.status(500).json({ message: 'Failed to send verification email.' });
     }
 
-    res.json({ message: 'Verification email sent! Please check your inbox.' });
+    res.json({ message: 'If an account exists with this email, a verification link will be sent.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+export const setupRepAccount = async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ message: 'Token and password are required' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+    }
+
+    // Hash the token to compare with database
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find user with valid invitation token
+    const user = await User.findOne({
+      invitationToken: hashedToken,
+      invitationExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired invitation token' });
+    }
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update user with password and mark as verified
+    user.password = hashedPassword;
+    user.isEmailVerified = true;
+    user.invitationToken = null;
+    user.invitationExpires = null;
+    await user.save();
+
+    res.json({ message: 'Account setup successful! You can now log in.' });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
   }
