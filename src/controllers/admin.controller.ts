@@ -85,8 +85,6 @@ export const getCompanies = async (req: AuthRequest, res: Response) => {
       .populate('ownerId', 'name email isEmailVerified')
       .sort({ createdAt: -1 });
 
-    console.log('📊 Total companies found:', companies.length);
-
     // Get rep count for each company
     const companiesWithRepCount = await Promise.all(
       companies.map(async (company) => {
@@ -103,14 +101,11 @@ export const getCompanies = async (req: AuthRequest, res: Response) => {
       })
     );
 
-    console.log('✅ Returning companies:', companiesWithRepCount.length);
-
     res.json({
       success: true,
       companies: companiesWithRepCount
     });
   } catch (error) {
-    console.error('❌ Error fetching companies:', error);
     res.status(500).json({ message: 'Server error', error });
   }
 };
