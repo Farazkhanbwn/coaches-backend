@@ -7,11 +7,16 @@ import authRoutes from './routes/auth.routes.js';
 import playbookRoutes from './routes/playbook.routes.js';
 import coachRoutes from './routes/coach.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import paymentRoutes from './routes/payment.routes.js';
+import webhookRoutes from './routes/webhook.routes.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Webhook route BEFORE express.json() middleware
+app.use('/api/webhook', webhookRoutes);
 
 // Middleware
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
@@ -26,6 +31,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/playbooks', playbookRoutes);
 app.use('/api/coach', coachRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/payment', paymentRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Coaches Backend API' });
