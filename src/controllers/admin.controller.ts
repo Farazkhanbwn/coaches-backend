@@ -165,3 +165,50 @@ export const deleteCompany = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error });
   }
 };
+
+export const getAllUsers = async (req: AuthRequest, res: Response) => {
+  try {
+  const users = await User.find({ role: { $in: ['coach', 'sales'] } })
+      .select('-password -emailVerificationToken -resetPasswordToken')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, users });
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch users' });
+  }
+};
+
+export const updateUserSubscription = async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { plan, status, billingCycle, nextBillingDate } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const subscriptionData: any = {
+      plan,
+      status,
+      billingCycle,
+      startDate: user.subscription?.startDate || new Date(),
+      lastUpdatedBy: req.user?.userId,
+      lastUpdatedAt: new Date()
+    };
+
+    if (nextBillingDate) {
+      subscriptionData.nextBillingDate = new Date(nextBillingDate);
+    }
+
+    user.subscription = subscriptionData;
+    await user.save();
+
+    const updatedUser = await User.findById(userId).select('-password');
+    res.status(200).json({ success: true, user: updatedUser });
+  } catch (error) {
+    console.error('Update subscription error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update subscription' });
+  }
+};

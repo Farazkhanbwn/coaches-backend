@@ -20,6 +20,15 @@ export interface IUser extends Document {
   resetPasswordExpires?: Date | null;
   invitationToken?: string | null;
   invitationExpires?: Date | null;
+  subscription?: {
+    plan: 'Free' | 'Pro' | 'Enterprise';
+    status: 'Active' | 'Inactive' | 'Trial' | 'Pending';
+    billingCycle: 'Monthly' | 'Yearly';
+    startDate?: Date;
+    nextBillingDate?: Date;
+    lastUpdatedBy?: string;
+    lastUpdatedAt?: Date;
+  };
   createdAt: Date;
 }
 
@@ -41,6 +50,15 @@ const userSchema = new Schema<IUser>({
   resetPasswordExpires: { type: Date },
   invitationToken: { type: String },
   invitationExpires: { type: Date },
+  subscription: {
+    plan: { type: String, enum: ['Free', 'Pro', 'Enterprise'], default: 'Free' },
+    status: { type: String, enum: ['Active', 'Inactive', 'Trial', 'Pending'], default: 'Active' },
+    billingCycle: { type: String, enum: ['Monthly', 'Yearly'], default: 'Monthly' },
+    startDate: { type: Date },
+    nextBillingDate: { type: Date },
+    lastUpdatedBy: { type: String },
+    lastUpdatedAt: { type: Date }
+  },
   createdAt: { type: Date, default: Date.now }
 });
 
