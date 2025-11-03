@@ -14,7 +14,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 export const createCheckoutSession = async (
   priceId: string,
   userId: string,
-  userEmail: string
+  userEmail: string,
+  planType: string = 'Pro',
+  billingCycle: string = 'Monthly'
 ) => {
   const session = await stripe.checkout.sessions.create({
     mode: 'subscription',
@@ -30,11 +32,13 @@ export const createCheckoutSession = async (
     customer_email: userEmail,
     metadata: {
       userId: userId,
+      planType: planType,
+      billingCycle: billingCycle,
     },
   });
 
   return session;
-};
+}
 
 export const getSubscription = async (subscriptionId: string) => {
   return await stripe.subscriptions.retrieve(subscriptionId);

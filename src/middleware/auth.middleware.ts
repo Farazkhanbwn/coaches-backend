@@ -8,7 +8,7 @@ export interface AuthRequest extends Request {
   };
 }
 
-export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction) => {
+export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const token = req.cookies.token;
 
@@ -22,6 +22,21 @@ export const verifyToken = (req: AuthRequest, res: Response, next: NextFunction)
     };
 
     req.user = decoded;
+    
+    // Auto-expire subscription if nextBillingDate passed
+    const User = (await import('../models/User.model.js')).default;
+    const user = await User.findById(decoded.userId);
+    
+    if (user?.subscription?.nextBillingDate && user.subscription.status === 'Active') {
+      const now = new Date();
+      const billingDate = new Date(user.subscription.nextBillingDate);
+      
+      if (now > billingDate) {
+        user.subscription.status = 'Inactive';
+        await user.save();
+      }
+    }
+    
     next();
   } catch (error) {
     res.status(401).json({ message: 'Token is not valid' });

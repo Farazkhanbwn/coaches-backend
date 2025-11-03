@@ -18,11 +18,22 @@ export const createPaymentSession = async (req: AuthRequest, res: Response) => {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    const session = await createCheckoutSession(priceId, userId, user.email);
+    // Determine plan type and billing cycle from priceId
+    let planType = 'Pro';
+    let billingCycle = 'Monthly';
+    
+    if (priceId === process.env.STRIPE_TEAM_PLAN_PRICE_ID || priceId === process.env.STRIPE_TEAM_YEARLY_PRICE_ID) {
+      planType = 'Enterprise';
+    }
+    
+    if (priceId === process.env.STRIPE_PRO_YEARLY_PRICE_ID || priceId === process.env.STRIPE_TEAM_YEARLY_PRICE_ID) {
+      billingCycle = 'Yearly';
+    }
+
+    const session = await createCheckoutSession(priceId, userId, user.email, planType, billingCycle);
 
     res.status(200).json({ success: true, sessionId: session.id, url: session.url });
   } catch (error) {
-    console.error('Create payment session error:', error);
     res.status(500).json({ success: false, message: 'Failed to create payment session' });
   }
 };
@@ -41,12 +52,15 @@ export const verifyPaymentSession = async (req: AuthRequest, res: Response) => {
     if (session.payment_status === 'paid' && session.metadata?.userId === userId) {
       const user = await User.findById(userId);
       if (user) {
+        const planType = session.metadata?.planType || 'Pro';
+        const billingCycle = session.metadata?.billingCycle || 'Monthly';
+        const daysToAdd = billingCycle === 'Yearly' ? 365 : 30;
         user.subscription = {
-          plan: 'Pro',
+          plan: planType as 'Free' | 'Pro' | 'Enterprise',
           status: 'Active',
-          billingCycle: 'Monthly',
+          billingCycle: billingCycle as 'Monthly' | 'Yearly',
           startDate: new Date(),
-          nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          nextBillingDate: new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000),
           lastUpdatedAt: new Date()
         };
         await user.save();
@@ -56,7 +70,6 @@ export const verifyPaymentSession = async (req: AuthRequest, res: Response) => {
 
     res.status(400).json({ success: false, message: 'Payment verification failed' });
   } catch (error) {
-    console.error('Verify payment error:', error);
     res.status(500).json({ success: false, message: 'Failed to verify payment' });
   }
 };

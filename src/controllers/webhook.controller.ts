@@ -22,7 +22,6 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
       process.env.STRIPE_WEBHOOK_SECRET || ''
     );
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
@@ -31,24 +30,25 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
     case 'checkout.session.completed': {
       const session = event.data.object as Stripe.Checkout.Session;
       const userId = session.metadata?.userId;
+      const planType = session.metadata?.planType || 'Pro';
+      const billingCycle = session.metadata?.billingCycle || 'Monthly';
 
       if (userId) {
         try {
           const user = await User.findById(userId);
           if (user) {
+            const daysToAdd = billingCycle === 'Yearly' ? 365 : 30;
             user.subscription = {
-              plan: 'Pro',
+              plan: planType as 'Free' | 'Pro' | 'Enterprise',
               status: 'Active',
-              billingCycle: 'Monthly',
+              billingCycle: billingCycle as 'Monthly' | 'Yearly',
               startDate: new Date(),
-              nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              nextBillingDate: new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000),
               lastUpdatedAt: new Date()
             };
             await user.save();
-            console.log(`Subscription activated for user ${userId}`);
           }
         } catch (error) {
-          console.error('Error updating user subscription:', error);
         }
       }
       break;
@@ -61,7 +61,7 @@ export const handleStripeWebhook = async (req: Request, res: Response) => {
     }
 
     default:
-      console.log(`Unhandled event type ${event.type}`);
+      break;
   }
 
   res.json({ received: true });

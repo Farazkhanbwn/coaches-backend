@@ -131,7 +131,14 @@ export const verifyAuth = async (req: AuthRequest, res: Response) => {
     }
 
     res.json({
-      user: { id: user._id, name: user.name, email: user.email, role: user.role, companyName: user.companyName }
+      user: { 
+        id: user._id, 
+        name: user.name, 
+        email: user.email, 
+        role: user.role, 
+        companyName: user.companyName,
+        subscription: user.subscription
+      }
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
