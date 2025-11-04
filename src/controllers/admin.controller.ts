@@ -51,7 +51,14 @@ export const addCompany = async (req: AuthRequest, res: Response) => {
       companyName: name,
       isEmailVerified: false,
       invitationToken: hashedToken,
-      invitationExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      invitationExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      subscription: {
+        plan: 'Free',
+        status: 'Trial',
+        billingCycle: 'Monthly',
+        startDate: new Date(),
+        nextBillingDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days trial
+      }
     });
 
     await coach.save();
@@ -168,11 +175,27 @@ export const deleteCompany = async (req: AuthRequest, res: Response) => {
 
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
-  const users = await User.find({ role: { $in: ['coach', 'sales'] } })
+    const users = await User.find({ role: { $in: ['coach', 'sales'] } })
       .select('-password -emailVerificationToken -resetPasswordToken')
       .sort({ createdAt: -1 });
 
-    res.status(200).json({ success: true, users });
+    // Check and update expired trials/subscriptions
+    const now = new Date();
+    const updatedUsers = await Promise.all(
+      users.map(async (user) => {
+        if (user.subscription?.nextBillingDate && 
+            (user.subscription.status === 'Active' || user.subscription.status === 'Trial')) {
+          const billingDate = new Date(user.subscription.nextBillingDate);
+          if (now > billingDate) {
+            user.subscription.status = 'Inactive';
+            await user.save();
+          }
+        }
+        return user;
+      })
+    );
+
+    res.status(200).json({ success: true, users: updatedUsers });
   } catch (error) {
     console.error('Get all users error:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch users' });
@@ -191,7 +214,7 @@ export const updateUserSubscription = async (req: AuthRequest, res: Response) =>
 
     const subscriptionData: any = {
       plan,
-      status,
+      status, 
       billingCycle,
       startDate: user.subscription?.startDate || new Date(),
       lastUpdatedBy: req.user?.userId,

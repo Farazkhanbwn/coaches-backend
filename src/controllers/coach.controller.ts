@@ -40,7 +40,14 @@ export const addRep = async (req: AuthRequest, res: Response) => {
       companyName: coach.companyName,
       isEmailVerified: false,
       invitationToken: hashedToken,
-      invitationExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      invitationExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      subscription: {
+        plan: 'Free',
+        status: 'Trial',
+        billingCycle: 'Monthly',
+        startDate: new Date(),
+        nextBillingDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days trial
+      }
     });
 
     await rep.save();

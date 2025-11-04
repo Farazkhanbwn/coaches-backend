@@ -27,7 +27,8 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
     const User = (await import('../models/User.model.js')).default;
     const user = await User.findById(decoded.userId);
     
-    if (user?.subscription?.nextBillingDate && user.subscription.status === 'Active') {
+    if (user?.subscription?.nextBillingDate && 
+        (user.subscription.status === 'Active' || user.subscription.status === 'Trial')) {
       const now = new Date();
       const billingDate = new Date(user.subscription.nextBillingDate);
       

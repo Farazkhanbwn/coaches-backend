@@ -40,7 +40,14 @@ export const signup = async (req: Request, res: Response) => {
       ownerEmail: mappedRole === 'coach' ? ownerEmail : undefined,
       isEmailVerified: false,
       emailVerificationToken: hashedToken,
-      emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+      emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+      subscription: {
+        plan: 'Free',
+        status: 'Trial',
+        billingCycle: 'Monthly',
+        startDate: new Date(),
+        nextBillingDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days trial
+      }
     });
 
     await user.save();
@@ -333,6 +340,44 @@ export const setupRepAccount = async (req: Request, res: Response) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Update user with password and mark as verified
+    user.password = hashedPassword;
+    user.isEmailVerified = true;
+    user.invitationToken = null;
+    user.invitationExpires = null;
+    await user.save();
+
+    res.json({ message: 'Account setup successful! You can now log in.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+};
+
+
+export const setupCoachAccount = async (req: Request, res: Response) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ message: 'Token and password are required' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+    }
+
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+    const user = await User.findOne({
+      invitationToken: hashedToken,
+      invitationExpires: { $gt: new Date() }
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired invitation token' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     user.password = hashedPassword;
     user.isEmailVerified = true;
     user.invitationToken = null;
