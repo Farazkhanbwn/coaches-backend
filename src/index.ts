@@ -9,6 +9,7 @@ import coachRoutes from './routes/coach.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+import { apiLimiter } from './middleware/rateLimiter.middleware.js';
 
 dotenv.config();
 
@@ -22,6 +23,9 @@ app.use('/api/webhook', webhookRoutes);
 app.use(cors({ origin: 'http://localhost:3000', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+
+// Rate limiting - Apply to all API routes
+app.use('/api/', apiLimiter);
 
 // Database connection
 connectDB();
