@@ -3,8 +3,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/User.model.js';
+import LoginSession from '../models/LoginSession.model.js';
 import type { AuthRequest } from '../middleware/auth.middleware.js';
 import { sendPasswordResetEmail, sendEmailVerification } from '../utils/email.util.js';
+import { parseUserAgent, getClientIp } from '../utils/deviceParser.util.js';
 
 export const signup = async (req: Request, res: Response) => {
   try {
@@ -92,6 +94,26 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
+    // Update last login timestamp and increment login count
+    user.lastLoginAt = new Date();
+    user.loginCount = (user.loginCount || 0) + 1;
+    await user.save();
+
+    // Create login session
+    const userAgent = req.headers['user-agent'] || '';
+    const ipAddress = getClientIp(req);
+    const { browser, os, device } = parseUserAgent(userAgent);
+
+    await LoginSession.create({
+      userId: user._id,
+      userAgent,
+      ipAddress,
+      browser,
+      os,
+      device,
+      isActive: true
+    });
+
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET || 'secret',
@@ -114,8 +136,16 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-export const logout = async (req: Request, res: Response) => {
+export const logout = async (req: AuthRequest, res: Response) => {
   try {
+    // Mark active sessions as inactive
+    if (req.user?.userId) {
+      await LoginSession.updateMany(
+        { userId: req.user.userId, isActive: true },
+        { isActive: false, logoutTime: new Date() }
+      );
+    }
+
     res.clearCookie('token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',

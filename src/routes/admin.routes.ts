@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { addCompany, getCompanies, updateCompany, deleteCompany, getAllUsers, updateUserSubscription, createUser, updateUser, deleteUser, sendUpgradeLink } from '../controllers/admin.controller.js';
+import { getUserSessions } from '../controllers/session.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { createLimiter } from '../middleware/rateLimiter.middleware.js';
 
@@ -18,5 +19,8 @@ router.put('/users/:userId', verifyToken, updateUser);
 router.delete('/users/:userId', verifyToken, createLimiter, deleteUser);
 router.post('/users/:userId/send-upgrade-link', verifyToken, createLimiter, sendUpgradeLink);
 router.put('/users/:userId/subscription', verifyToken, updateUserSubscription);
+
+// Session routes
+router.get('/users/:userId/sessions', verifyToken, getUserSessions);
 
 export default router;

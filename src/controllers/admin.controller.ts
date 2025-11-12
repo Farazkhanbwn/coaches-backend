@@ -178,7 +178,7 @@ export const getAllUsers = async (req: AuthRequest, res: Response) => {
   try {
     const users = await User.find({ role: { $in: ['coach', 'sales'] } })
       .select('-password -emailVerificationToken -resetPasswordToken')
-      .sort({ createdAt: -1 });
+      .sort({ lastLoginAt: -1, createdAt: -1 });
 
     // Check and update expired trials/subscriptions
     const now = new Date();
