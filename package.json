@@ -7,7 +7,10 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "vercel-build": "echo 'No build needed for Vercel'",
+    "create-admin": "tsx src/scripts/createAdmin.ts",
+    "delete-all-companies": "tsx src/scripts/deleteAllCompanies.ts"
   },
   "keywords": [],
   "author": "",
@@ -19,8 +22,10 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.2.1",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.19.2"
+    "mongoose": "^8.19.2",
+    "stripe": "^19.2.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
