@@ -104,3 +104,66 @@ export const removeRep = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error });
   }
 };
+
+export const getTeamCallSessions = async (req: AuthRequest, res: Response) => {
+  try {
+    const coachId = req.user?.userId;
+    const { dateFrom, dateTo, member, scenario, minScore, maxScore, page = '1', limit = '4' } = req.query;
+
+    // Get all team members
+    const teamMembers = await User.find({ coachId, role: 'sales' }).select('_id');
+    const teamMemberIds = teamMembers.map(member => member._id);
+
+    // Build filter query
+    const filter: any = { userId: { $in: teamMemberIds } };
+
+    if (dateFrom || dateTo) {
+      filter.createdAt = {};
+      if (dateFrom) filter.createdAt.$gte = new Date(dateFrom as string);
+      if (dateTo) filter.createdAt.$lte = new Date(dateTo as string);
+    }
+
+    if (member) {
+      filter.userId = member;
+    }
+
+    if (scenario) {
+      filter.callType = scenario;
+    }
+
+    if (minScore || maxScore) {
+      filter['feedback.overallScore'] = {};
+      if (minScore) filter['feedback.overallScore'].$gte = Number(minScore);
+      if (maxScore) filter['feedback.overallScore'].$lte = Number(maxScore);
+    }
+
+    const CallSession = (await import('../models/CallSession.model.js')).default;
+    
+    // Pagination
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+    
+    const [sessions, total] = await Promise.all([
+      CallSession.find(filter)
+        .populate('userId', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limitNum),
+      CallSession.countDocuments(filter)
+    ]);
+
+    res.json({
+      success: true,
+      sessions,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: Math.ceil(total / limitNum),
+        totalItems: total,
+        itemsPerPage: limitNum
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+};

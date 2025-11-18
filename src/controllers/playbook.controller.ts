@@ -138,6 +138,15 @@ export const deletePlaybook = async (req: AuthRequest, res: Response): Promise<v
   try {
     const { id } = req.params;
 
+    // Validate MongoDB ObjectId
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid playbook ID',
+      });
+      return;
+    }
+
     const playbook = await Playbook.findById(id);
 
     if (!playbook) {

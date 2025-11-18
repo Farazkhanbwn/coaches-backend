@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import User from '../models/User.model.js';
+import Company from '../models/Company.model.js';
 import LoginSession from '../models/LoginSession.model.js';
 import type { AuthRequest } from '../middleware/auth.middleware.js';
 import { sendPasswordResetEmail, sendEmailVerification } from '../utils/email.util.js';
@@ -19,7 +20,11 @@ export const signup = async (req: Request, res: Response) => {
     };
     const mappedRole = roleMapping[role] || role;
 
-    const existingUser = await User.findOne({ email: mappedRole === 'sales' ? email : ownerEmail });
+    // Use consistent email field for all roles
+    const userEmail = mappedRole === 'sales' ? email : ownerEmail;
+    const userName = mappedRole === 'sales' ? fullName : ownerName;
+
+    const existingUser = await User.findOne({ email: userEmail });
     if (existingUser) {
       return res.status(400).json({ message: 'User already exists' });
     }
@@ -33,13 +38,11 @@ export const signup = async (req: Request, res: Response) => {
     const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
     const user = new User({
-      name: mappedRole === 'sales' ? fullName : ownerName,
-      email: mappedRole === 'sales' ? email : ownerEmail,
+      name: userName,
+      email: userEmail,
       password: hashedPassword,
       role: mappedRole,
       companyName: mappedRole === 'coach' ? companyName : undefined,
-      ownerName: mappedRole === 'coach' ? ownerName : undefined,
-      ownerEmail: mappedRole === 'coach' ? ownerEmail : undefined,
       isEmailVerified: false,
       emailVerificationToken: hashedToken,
       emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
@@ -54,12 +57,51 @@ export const signup = async (req: Request, res: Response) => {
 
     await user.save();
 
+    // Create Company entry if user is a coach
+    let company = null;
+    if (mappedRole === 'coach' && companyName) {
+      try {
+        // Check if company with same name or owner email already exists
+        const existingCompany = await Company.findOne({
+          $or: [
+            { name: companyName },
+            { ownerEmail: userEmail }
+          ]
+        });
+        
+        if (existingCompany) {
+          await User.deleteOne({ _id: user._id });
+          return res.status(400).json({ message: 'Company with this name or owner email already exists' });
+        }
+        
+        company = new Company({
+          name: companyName,
+          ownerName: userName,
+          ownerEmail: userEmail,
+          ownerId: user._id,
+          status: 'pending'
+        });
+        await company.save();
+        
+        // Update user with companyId
+        user.companyId = company._id as any;
+        await user.save();
+      } catch (companyError) {
+        // If company creation fails, delete the user
+        await User.deleteOne({ _id: user._id });
+        return res.status(500).json({ message: 'Failed to create company. Please try again.' });
+      }
+    }
+
     // Send verification email
     try {
-      await sendEmailVerification(user.email, user.name, verificationToken);
+      await sendEmailVerification(userEmail, userName, verificationToken);
     } catch (emailError) {
-      // If email fails, delete the user and return error
+      // If email fails, delete the user and company
       await User.deleteOne({ _id: user._id });
+      if (company) {
+        await Company.deleteOne({ _id: company._id });
+      }
       return res.status(500).json({ message: 'Failed to send verification email. Please try again.' });
     }
 
@@ -295,6 +337,11 @@ export const verifyEmail = async (req: Request, res: Response) => {
     user.emailVerificationToken = null;
     user.emailVerificationExpires = null;
     await user.save();
+
+    // If user is a coach, update company status to active
+    if (user.role === 'coach' && user.companyId) {
+      await Company.findByIdAndUpdate(user.companyId, { status: 'active' });
+    }
 
     res.json({ message: 'Email verified successfully! You can now log in.' });
   } catch (error) {
