@@ -167,3 +167,61 @@ export const getTeamCallSessions = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: 'Server error', error });
   }
 };
+
+export const getTeamAnalytics = async (req: AuthRequest, res: Response) => {
+  try {
+    const coachId = req.user?.userId;
+
+    // Get all team members
+    const teamMembers = await User.find({ coachId, role: 'sales' }).select('_id name email');
+    const teamMemberIds = teamMembers.map(m => m._id);
+
+    // Get all their call sessions
+    const CallSession = (await import('../models/CallSession.model.js')).default;
+    const sessions = await CallSession.find({ userId: { $in: teamMemberIds } });
+
+    // Calculate average score
+    const avgScore = sessions.length > 0
+      ? (sessions.reduce((sum, s) => sum + (s.feedback?.overallScore || 0), 0) / sessions.length).toFixed(1)
+      : '0';
+
+    // Calculate this week sessions
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    const thisWeekSessions = sessions.filter(s => new Date(s.createdAt) > weekAgo).length;
+
+    // Calculate top performers
+    const memberStats = teamMembers.map(member => {
+      const memberSessions = sessions.filter(s => s.userId.toString() === member._id.toString());
+      const memberAvgScore = memberSessions.length > 0
+        ? memberSessions.reduce((sum, s) => sum + (s.feedback?.overallScore || 0), 0) / memberSessions.length
+        : 0;
+
+      return {
+        id: member._id,
+        name: member.name,
+        email: member.email,
+        role: 'Sales Rep',
+        score: Math.round(memberAvgScore),
+        sessionCount: memberSessions.length,
+        status: 'Active'
+      };
+    });
+
+    const topPerformers = memberStats
+      .filter(m => m.sessionCount > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 3);
+
+    res.json({
+      success: true,
+      analytics: {
+        avgScore,
+        thisWeekSessions,
+        topPerformers
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error });
+  }
+};

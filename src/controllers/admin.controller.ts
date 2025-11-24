@@ -438,3 +438,79 @@ export const updateUserSubscription = async (req: AuthRequest, res: Response) =>
     res.status(500).json({ success: false, message: 'Failed to update subscription' });
   }
 };
+
+// Get platform-wide call statistics
+export const getPlatformStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const CallSession = (await import('../models/CallSession.model.js')).default;
+
+    const [totalCalls, avgScoreData, totalTimeData, activeUsers] = await Promise.all([
+      CallSession.countDocuments(),
+      CallSession.aggregate([{ $group: { _id: null, avgScore: { $avg: '$feedback.overallScore' } } }]),
+      CallSession.aggregate([{ $group: { _id: null, totalSeconds: { $sum: '$duration' } } }]),
+      User.countDocuments({ role: { $in: ['coach', 'sales'] }, isEmailVerified: true })
+    ]);
+
+    const avgScore = avgScoreData[0]?.avgScore || 0;
+    const totalHours = totalTimeData[0]?.totalSeconds ? (totalTimeData[0].totalSeconds / 3600).toFixed(1) : '0';
+
+    res.json({
+      success: true,
+      stats: { totalCalls, avgScore: avgScore.toFixed(1), totalHours, activeUsers }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch platform stats' });
+  }
+};
+
+// Get company-wise call statistics
+export const getCompanyStats = async (req: AuthRequest, res: Response) => {
+  try {
+    const CallSession = (await import('../models/CallSession.model.js')).default;
+    const companies = await Company.find();
+
+    const companyStats = await Promise.all(
+      companies.map(async (company) => {
+        const users = await User.find({ companyId: company._id, role: 'sales' }).select('_id');
+        const userIds = users.map(u => u._id);
+
+        const [totalCalls, avgScoreData, totalTimeData] = await Promise.all([
+          CallSession.countDocuments({ userId: { $in: userIds } }),
+          CallSession.aggregate([{ $match: { userId: { $in: userIds } } }, { $group: { _id: null, avgScore: { $avg: '$feedback.overallScore' } } }]),
+          CallSession.aggregate([{ $match: { userId: { $in: userIds } } }, { $group: { _id: null, totalSeconds: { $sum: '$duration' } } }])
+        ]);
+
+        return {
+          companyId: company._id,
+          companyName: company.name,
+          totalCalls,
+          avgScore: avgScoreData[0]?.avgScore?.toFixed(1) || '0',
+          totalHours: totalTimeData[0]?.totalSeconds ? (totalTimeData[0].totalSeconds / 3600).toFixed(1) : '0',
+          activeReps: users.length
+        };
+      })
+    );
+
+    res.json({ success: true, companyStats });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch company stats' });
+  }
+};
+
+// Get specific user's call sessions
+export const getUserCallSessions = async (req: AuthRequest, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const { limit = '10', skip = '0' } = req.query;
+
+    const CallSession = (await import('../models/CallSession.model.js')).default;
+    const [sessions, total] = await Promise.all([
+      CallSession.find({ userId }).sort({ createdAt: -1 }).limit(Number(limit)).skip(Number(skip)),
+      CallSession.countDocuments({ userId })
+    ]);
+
+    res.json({ success: true, sessions, total });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Failed to fetch user sessions' });
+  }
+};
