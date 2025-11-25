@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 5000;
 app.use('/api/webhook', webhookRoutes);
 
 // Middleware
-app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
+app.use(cors({ origin: ['https://coach-fro.vercel.app', process.env.FRONTEND_URL].filter(Boolean) as string[], credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
 
