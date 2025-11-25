@@ -162,18 +162,11 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '1d' }
     );
 
-    // Auto-detect HTTPS for production
-    const isProduction = process.env.NODE_ENV === 'production' || 
-                         process.env.VERCEL === '1' || 
-                         req.protocol === 'https' ||
-                         req.get('x-forwarded-proto') === 'https';
-    
     res.cookie('token', token, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
-      maxAge: 1 * 24 * 60 * 60 * 1000,
-      path: '/'
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 1 * 24 * 60 * 60 * 1000
     });
 
     res.json({
@@ -195,16 +188,10 @@ export const logout = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    // Auto-detect HTTPS for production
-    const isProduction = process.env.NODE_ENV === 'production' || 
-                         process.env.VERCEL === '1' || 
-                         req.protocol === 'https' ||
-                         req.get('x-forwarded-proto') === 'https';
-    
     res.clearCookie('token', {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
       path: '/'
     });
 
