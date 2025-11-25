@@ -23,10 +23,22 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
 
     req.user = decoded;
     
-    // Auto-expire subscription if nextBillingDate passed
+    // Check if user still exists in database
     const User = (await import('../models/User.model.js')).default;
     const user = await User.findById(decoded.userId);
     
+    if (!user) {
+      // User has been deleted, clear cookie and deny access
+      res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        path: '/'
+      });
+      return res.status(401).json({ message: 'User account no longer exists' });
+    }
+    
+    // Auto-expire subscription if nextBillingDate passed
     if (user?.subscription?.nextBillingDate && 
         (user.subscription.status === 'Active' || user.subscription.status === 'Trial')) {
       const now = new Date();

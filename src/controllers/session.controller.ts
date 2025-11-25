@@ -11,6 +11,13 @@ export const getUserSessions = async (req: AuthRequest, res: Response) => {
       return res.status(403).json({ message: 'Unauthorized' });
     }
 
+    // Auto-expire sessions older than 1 day
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await LoginSession.updateMany(
+      { userId, isActive: true, loginTime: { $lt: oneDayAgo } },
+      { isActive: false, logoutTime: new Date() }
+    );
+
     const sessions = await LoginSession.find({ userId })
       .sort({ loginTime: -1 })
       .limit(10);

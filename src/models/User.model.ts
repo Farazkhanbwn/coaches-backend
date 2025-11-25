@@ -31,6 +31,7 @@ export interface IUser extends Document {
   };
   lastLoginAt?: Date;
   loginCount: number;
+  passwordChangedAt?: Date;
   createdAt: Date;
 }
 
@@ -63,6 +64,7 @@ const userSchema = new Schema<IUser>({
   },
   lastLoginAt: { type: Date },
   loginCount: { type: Number, default: 0 },
+  passwordChangedAt: { type: Date },
   createdAt: { type: Date, default: Date.now }
 });
 

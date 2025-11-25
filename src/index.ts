@@ -9,6 +9,7 @@ import coachRoutes from './routes/coach.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
 import webhookRoutes from './routes/webhook.routes.js';
+import callSessionRoutes from './routes/callSession.routes.js';
 import { apiLimiter } from './middleware/rateLimiter.middleware.js';
 
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/api/playbooks', playbookRoutes);
 app.use('/api/coach', coachRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/call-sessions', callSessionRoutes);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Coaches Backend API' });

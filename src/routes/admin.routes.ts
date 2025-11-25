@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { addCompany, getCompanies, updateCompany, deleteCompany, getAllUsers, updateUserSubscription, createUser, updateUser, deleteUser, sendUpgradeLink } from '../controllers/admin.controller.js';
+import { addCompany, getCompanies, updateCompany, deleteCompany, getAllUsers, updateUserSubscription, createUser, updateUser, deleteUser, sendUpgradeLink, getPlatformStats, getCompanyStats, getUserCallSessions } from '../controllers/admin.controller.js';
 import { getUserSessions } from '../controllers/session.controller.js';
 import { verifyToken } from '../middleware/auth.middleware.js';
 import { createLimiter } from '../middleware/rateLimiter.middleware.js';
@@ -22,5 +22,10 @@ router.put('/users/:userId/subscription', verifyToken, updateUserSubscription);
 
 // Session routes
 router.get('/users/:userId/sessions', verifyToken, getUserSessions);
+
+// Analytics routes
+router.get('/platform-stats', verifyToken, getPlatformStats);
+router.get('/company-stats', verifyToken, getCompanyStats);
+router.get('/users/:userId/call-sessions', verifyToken, getUserCallSessions);
 
 export default router;

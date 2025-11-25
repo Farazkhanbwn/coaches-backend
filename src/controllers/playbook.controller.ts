@@ -133,10 +133,42 @@ export const updatePlaybook = async (req: AuthRequest, res: Response): Promise<v
   }
 };
 
+// Get playbooks by userId (for admin)
+export const getUserPlaybooks = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params;
+
+    const playbooks = await Playbook.find({ createdBy: userId })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .select('title createdAt updatedAt');
+
+    res.status(200).json({
+      success: true,
+      playbooks,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user playbooks',
+      error: error.message,
+    });
+  }
+};
+
 // Delete playbook
 export const deletePlaybook = async (req: AuthRequest, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+
+    // Validate MongoDB ObjectId
+    if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+      res.status(400).json({
+        success: false,
+        message: 'Invalid playbook ID',
+      });
+      return;
+    }
 
     const playbook = await Playbook.findById(id);
 
