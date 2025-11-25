@@ -32,8 +32,9 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
       res.clearCookie('token', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        path: '/'
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        path: '/',
+        domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost'
       });
       return res.status(401).json({ message: 'User account no longer exists' });
     }
