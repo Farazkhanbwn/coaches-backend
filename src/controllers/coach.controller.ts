@@ -192,7 +192,8 @@ export const getTeamAnalytics = async (req: AuthRequest, res: Response) => {
 
     // Calculate top performers
     const memberStats = teamMembers.map(member => {
-      const memberSessions = sessions.filter(s => s.userId.toString() === member._id.toString());
+      const memberId = String(member._id);
+      const memberSessions = sessions.filter(s => s.userId.toString() === memberId);
       const memberAvgScore = memberSessions.length > 0
         ? memberSessions.reduce((sum, s) => sum + (s.feedback?.overallScore || 0), 0) / memberSessions.length
         : 0;
