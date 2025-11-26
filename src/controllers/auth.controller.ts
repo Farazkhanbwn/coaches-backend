@@ -162,13 +162,23 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '1d' }
     );
 
-    res.cookie('token', token, {
+    const cookieOptions: any = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       maxAge: 1 * 24 * 60 * 60 * 1000,
-      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost'
-    });
+      path: '/'
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      cookieOptions.domain = 'localhost';
+    }
+
+    console.log('🍪 Login - Setting cookie:', { ...cookieOptions, token: 'HIDDEN' });
+    console.log('🌍 NODE_ENV:', process.env.NODE_ENV);
+    console.log('🔗 Origin:', req.headers.origin);
+
+    res.cookie('token', token, cookieOptions);
 
     res.json({
       message: 'Login successful',
@@ -189,13 +199,18 @@ export const logout = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    res.clearCookie('token', {
+    const cookieOptions: any = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      path: '/',
-      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost'
-    });
+      path: '/'
+    };
+
+    if (process.env.NODE_ENV !== 'production') {
+      cookieOptions.domain = 'localhost';
+    }
+
+    res.clearCookie('token', cookieOptions);
 
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
