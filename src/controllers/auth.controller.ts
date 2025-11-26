@@ -202,6 +202,7 @@ export const logout = async (req: AuthRequest, res: Response) => {
       path: '/'
     };
 
+
     res.clearCookie('token', cookieOptions);
 
     res.json({ message: 'Logged out successfully' });
