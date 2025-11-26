@@ -162,28 +162,19 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '1d' }
     );
 
-    const cookieOptions: any = {
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: true,
+      sameSite: 'none' as const,
       maxAge: 1 * 24 * 60 * 60 * 1000,
       path: '/'
     };
 
-    if (process.env.NODE_ENV !== 'production') {
-      cookieOptions.domain = 'localhost';
-    }
-
     console.log('🍪 Login - Setting cookie:', { ...cookieOptions, token: 'HIDDEN' });
     console.log('🌍 NODE_ENV:', process.env.NODE_ENV);
     console.log('🔗 Origin:', req.headers.origin);
-    console.log('🔗 Host:', req.headers.host);
 
     res.cookie('token', token, cookieOptions);
-    
-    // Explicitly set CORS headers for cookie
-    res.header('Access-Control-Allow-Credentials', 'true');
-    res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://coach-fro.vercel.app');
 
     res.json({
       message: 'Login successful',
@@ -204,16 +195,13 @@ export const logout = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    const cookieOptions: any = {
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: true,
+      sameSite: 'none' as const,
       path: '/'
     };
 
-    if (process.env.NODE_ENV !== 'production') {
-      cookieOptions.domain = 'localhost';
-    }
 
     res.clearCookie('token', cookieOptions);
 
