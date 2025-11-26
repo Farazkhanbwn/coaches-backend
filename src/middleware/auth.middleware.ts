@@ -12,6 +12,10 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
   try {
     const token = req.cookies.token;
 
+    console.log('🔐 Auth Middleware - Token present:', !!token);
+    console.log('🍪 All cookies:', Object.keys(req.cookies));
+    console.log('🔗 Request Origin:', req.headers.origin);
+
     if (!token) {
       return res.status(401).json({ message: 'No token, authorization denied' });
     }
@@ -29,13 +33,18 @@ export const verifyToken = async (req: AuthRequest, res: Response, next: NextFun
     
     if (!user) {
       // User has been deleted, clear cookie and deny access
-      res.clearCookie('token', {
+      const cookieOptions: any = {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        path: '/',
-        domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost'
-      });
+        path: '/'
+      };
+
+      if (process.env.NODE_ENV !== 'production') {
+        cookieOptions.domain = 'localhost';
+      }
+
+      res.clearCookie('token', cookieOptions);
       return res.status(401).json({ message: 'User account no longer exists' });
     }
     
