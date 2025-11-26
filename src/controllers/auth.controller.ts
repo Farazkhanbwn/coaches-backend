@@ -162,19 +162,12 @@ export const login = async (req: Request, res: Response) => {
       { expiresIn: '1d' }
     );
 
-    const cookieOptions = {
+    res.cookie('token', token, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none' as const,
-      maxAge: 1 * 24 * 60 * 60 * 1000,
-      path: '/'
-    };
-
-    console.log('🍪 Login - Setting cookie:', { ...cookieOptions, token: 'HIDDEN' });
-    console.log('🌍 NODE_ENV:', process.env.NODE_ENV);
-    console.log('🔗 Origin:', req.headers.origin);
-
-    res.cookie('token', token, cookieOptions);
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 1 * 24 * 60 * 60 * 1000
+    });
 
     res.json({
       message: 'Login successful',
@@ -195,15 +188,13 @@ export const logout = async (req: AuthRequest, res: Response) => {
       );
     }
 
-    const cookieOptions = {
+    res.clearCookie('token', {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none' as const,
-      path: '/'
-    };
-
-
-    res.clearCookie('token', cookieOptions);
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      path: '/',
+      domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost'
+    });
 
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
