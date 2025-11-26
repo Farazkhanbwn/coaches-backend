@@ -177,8 +177,13 @@ export const login = async (req: Request, res: Response) => {
     console.log('🍪 Login - Setting cookie:', { ...cookieOptions, token: 'HIDDEN' });
     console.log('🌍 NODE_ENV:', process.env.NODE_ENV);
     console.log('🔗 Origin:', req.headers.origin);
+    console.log('🔗 Host:', req.headers.host);
 
     res.cookie('token', token, cookieOptions);
+    
+    // Explicitly set CORS headers for cookie
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://coach-fro.vercel.app');
 
     res.json({
       message: 'Login successful',
