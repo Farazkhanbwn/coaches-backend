@@ -25,7 +25,7 @@ const allowedOrigins = [
   'https://coach-fro.vercel.app',
   process.env.FRONTEND_URL,
   'http://localhost:3000'
-].filter(Boolean) as string[];
+]
 
 app.use(cors({ 
   origin: (origin, callback) => {
