@@ -10,10 +10,16 @@ export interface AuthRequest extends Request {
 
 export const verifyToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const token = req.cookies.token;
+    // Check Authorization header first, then fallback to cookie
+    const authHeader = req.headers.authorization;
+    let token = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+    
+    // Fallback to cookie if no Authorization header
+    if (!token) {
+      token = req.cookies.token;
+    }
 
     console.log('🔐 Auth Middleware - Token present:', !!token);
-    console.log('🍪 All cookies:', Object.keys(req.cookies));
     console.log('🔗 Request Origin:', req.headers.origin);
 
     if (!token) {
